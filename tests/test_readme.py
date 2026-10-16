@@ -9,5 +9,5 @@ def test_readme_exists():
 
 def test_readme_has_expected_sections():
     content = README.read_text(encoding="utf-8")
-    for heading in ("# orderbook-sim", "## Projektidee", "## Struktur", "## Beispiele"):
+    for heading in ("# orderbook-sim", "## Idea", "## Layout", "## Examples"):
         assert heading in content

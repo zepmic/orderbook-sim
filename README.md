@@ -1,32 +1,23 @@
 # orderbook-sim
 
-Simulation eines Limit-Orderbuchs mit Matching-Engine und einfachen
-Marktteilnehmern, um Marktmikrostruktur-Effekte (Spread, Tiefe,
-Preisbildung) nachzuvollziehen. Reine Simulation und Analyse: keine
-echten Orders, keine Börsenzugänge, keine API-Keys.
+A limit order book with a matching engine, plus a few simple simulated traders. The goal is to watch how spread and depth come out of order flow. It is a simulation only: no real orders, no exchange connections, no API keys.
 
-## Projektidee
+## Idea
 
-Ein Orderbuch führt Kauf- und Verkaufslimits auf verschiedenen
-Preisstufen (Ticks). Eine Matching-Engine setzt eingehende Orders
-gegen das Buch um (Preis-Zeit-Priorität). Darauf aufbauend simulieren
-einfache Marktteilnehmer (z. B. Market Maker, Noise Trader) Orderflow,
-damit sich das Verhalten des Orderbuchs über die Zeit beobachten und
-auswerten lässt.
+The book holds buy and sell limit orders at price levels (ticks). Incoming orders are matched against it with price-time priority. On top of that, simple agents such as a market maker and noise traders generate order flow, so the book can be observed and measured over time.
 
-## Struktur
+## Layout
 
 ```
-src/orderbook_sim/   Quellcode (Orderbuch, Matching-Engine, Teilnehmer)
-tests/                Tests (pytest)
+src/orderbook_sim/   source code (order book, matching engine, agents)
+tests/               pytest tests
 ```
 
-## Beispiele
+## Examples
 
-*(folgt – Platzhalter für ausführbare Beispielskripte, z. B. ein
-einfacher Simulationslauf mit Ausgabe des Orderbuchzustands)*
+Not written yet. Runnable example scripts will go here, starting with a basic simulation run that prints the state of the book.
 
-## Entwicklung
+## Development
 
 ```bash
 pip install -e ".[dev]"
