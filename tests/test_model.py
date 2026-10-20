@@ -1,6 +1,6 @@
 import pytest
 
-from orderbook_sim.model import Order, OrderType, Side
+from orderbook_sim.model import Order, OrderType, Side, Trade
 
 
 def test_create_limit_order():
@@ -53,3 +53,46 @@ def test_side_must_be_enum_member():
 def test_order_type_must_be_enum_member():
     with pytest.raises(ValueError):
         Order(id=1, side=Side.BUY, order_type="limit", price=100, qty=5, ts=0)
+
+
+def test_create_trade():
+    trade = Trade(price=100, qty=5, taker_order_id=2, maker_order_id=1, ts=0)
+    assert trade.price == 100
+    assert trade.qty == 5
+    assert trade.taker_order_id == 2
+    assert trade.maker_order_id == 1
+    assert trade.ts == 0
+
+
+@pytest.mark.parametrize("bad_price", [0, -10])
+def test_trade_price_must_be_positive(bad_price):
+    with pytest.raises(ValueError):
+        Trade(price=bad_price, qty=5, taker_order_id=2, maker_order_id=1, ts=0)
+
+
+@pytest.mark.parametrize("bad_qty", [0, -5])
+def test_trade_qty_must_be_positive(bad_qty):
+    with pytest.raises(ValueError):
+        Trade(price=100, qty=bad_qty, taker_order_id=2, maker_order_id=1, ts=0)
+
+
+@pytest.mark.parametrize("bad_id", [0, -1])
+def test_trade_taker_order_id_must_be_positive(bad_id):
+    with pytest.raises(ValueError):
+        Trade(price=100, qty=5, taker_order_id=bad_id, maker_order_id=1, ts=0)
+
+
+@pytest.mark.parametrize("bad_id", [0, -1])
+def test_trade_maker_order_id_must_be_positive(bad_id):
+    with pytest.raises(ValueError):
+        Trade(price=100, qty=5, taker_order_id=2, maker_order_id=bad_id, ts=0)
+
+
+def test_trade_taker_and_maker_must_differ():
+    with pytest.raises(ValueError):
+        Trade(price=100, qty=5, taker_order_id=1, maker_order_id=1, ts=0)
+
+
+def test_trade_ts_must_not_be_negative():
+    with pytest.raises(ValueError):
+        Trade(price=100, qty=5, taker_order_id=2, maker_order_id=1, ts=-1)

@@ -48,3 +48,31 @@ class Order:
                 raise ValueError(f"limit orders need a positive price, got {self.price}")
         elif self.price is not None:
             raise ValueError("market orders must not set a price")
+
+
+@dataclass(frozen=True)
+class Trade:
+    """A single execution resulting from matching a taker order against a maker order.
+
+    Price and quantity are integer ticks, never floats.
+    """
+
+    price: int
+    qty: int
+    taker_order_id: int
+    maker_order_id: int
+    ts: int
+
+    def __post_init__(self) -> None:
+        if self.price <= 0:
+            raise ValueError(f"price must be positive, got {self.price}")
+        if self.qty <= 0:
+            raise ValueError(f"qty must be positive, got {self.qty}")
+        if self.taker_order_id <= 0:
+            raise ValueError(f"taker_order_id must be positive, got {self.taker_order_id}")
+        if self.maker_order_id <= 0:
+            raise ValueError(f"maker_order_id must be positive, got {self.maker_order_id}")
+        if self.taker_order_id == self.maker_order_id:
+            raise ValueError("taker_order_id and maker_order_id must differ")
+        if self.ts < 0:
+            raise ValueError(f"ts must not be negative, got {self.ts}")
