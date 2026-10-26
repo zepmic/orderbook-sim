@@ -18,6 +18,12 @@ class OrderType(Enum):
     MARKET = "market"
 
 
+def _require_int(name: str, value: object) -> None:
+    """Reject floats and bools: prices and quantities are integer ticks."""
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise ValueError(f"{name} must be an int, got {value!r}")
+
+
 @dataclass(frozen=True)
 class Order:
     """A single order submitted to the book.
@@ -37,6 +43,10 @@ class Order:
             raise ValueError(f"side must be a Side, got {self.side!r}")
         if not isinstance(self.order_type, OrderType):
             raise ValueError(f"order_type must be an OrderType, got {self.order_type!r}")
+        for name in ("id", "qty", "ts"):
+            _require_int(name, getattr(self, name))
+        if self.price is not None:
+            _require_int("price", self.price)
         if self.id <= 0:
             raise ValueError(f"id must be positive, got {self.id}")
         if self.qty <= 0:
@@ -64,6 +74,8 @@ class Trade:
     ts: int
 
     def __post_init__(self) -> None:
+        for name in ("price", "qty", "taker_order_id", "maker_order_id", "ts"):
+            _require_int(name, getattr(self, name))
         if self.price <= 0:
             raise ValueError(f"price must be positive, got {self.price}")
         if self.qty <= 0:

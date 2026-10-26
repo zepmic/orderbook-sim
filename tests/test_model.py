@@ -96,3 +96,21 @@ def test_trade_taker_and_maker_must_differ():
 def test_trade_ts_must_not_be_negative():
     with pytest.raises(ValueError):
         Trade(price=100, qty=5, taker_order_id=2, maker_order_id=1, ts=-1)
+
+
+@pytest.mark.parametrize("field", ["id", "price", "qty", "ts"])
+@pytest.mark.parametrize("bad", [1.5, True, "5"])
+def test_order_rejects_non_int_values(field, bad):
+    values = {"id": 1, "price": 100, "qty": 5, "ts": 0}
+    values[field] = bad
+    with pytest.raises(ValueError):
+        Order(side=Side.BUY, order_type=OrderType.LIMIT, **values)
+
+
+@pytest.mark.parametrize("field", ["price", "qty", "taker_order_id", "maker_order_id", "ts"])
+@pytest.mark.parametrize("bad", [1.5, True, "5"])
+def test_trade_rejects_non_int_values(field, bad):
+    values = {"price": 100, "qty": 5, "taker_order_id": 2, "maker_order_id": 1, "ts": 0}
+    values[field] = bad
+    with pytest.raises(ValueError):
+        Trade(**values)
