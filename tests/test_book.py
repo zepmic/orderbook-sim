@@ -86,3 +86,47 @@ def test_len_counts_all_resting_orders_across_levels():
     side.add(make_order(2, Side.BUY, 100))
     side.add(make_order(3, Side.BUY, 99))
     assert len(side) == 3
+
+
+def test_fill_front_removes_order_once_fully_filled():
+    side = BookSide(Side.BUY)
+    first = make_order(1, Side.BUY, 100, qty=5)
+    second = make_order(2, Side.BUY, 100)
+    side.add(first)
+    side.add(second)
+    filled = side.fill_front(5)
+    assert filled is first
+    assert side.level(100) == [second]
+
+
+def test_fill_front_keeps_order_at_front_when_partially_filled():
+    side = BookSide(Side.BUY)
+    first = make_order(1, Side.BUY, 100, qty=5)
+    second = make_order(2, Side.BUY, 100)
+    side.add(first)
+    side.add(second)
+    side.fill_front(2)
+    remaining = side.level(100)
+    assert remaining[0].id == 1
+    assert remaining[0].qty == 3
+    assert remaining[1] is second
+
+
+def test_fill_front_drops_level_once_empty():
+    side = BookSide(Side.BUY)
+    side.add(make_order(1, Side.BUY, 100, qty=2))
+    side.fill_front(2)
+    assert side.best_price() is None
+
+
+def test_fill_front_rejects_qty_larger_than_resting_order():
+    side = BookSide(Side.BUY)
+    side.add(make_order(1, Side.BUY, 100, qty=2))
+    with pytest.raises(ValueError):
+        side.fill_front(3)
+
+
+def test_fill_front_raises_on_empty_side():
+    side = BookSide(Side.BUY)
+    with pytest.raises(KeyError):
+        side.fill_front(1)

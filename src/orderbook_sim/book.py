@@ -1,6 +1,7 @@
 """One side of the order book: resting limit orders grouped by price level."""
 
 from collections import deque
+from dataclasses import replace
 
 from .model import Order, OrderType, Side
 
@@ -47,6 +48,28 @@ class BookSide:
         if best is None:
             return None
         return self._levels[best][0]
+
+    def fill_front(self, qty: int) -> Order:
+        """Reduce the order at the front of the best price level by qty.
+
+        Removes the order once it is fully filled, otherwise keeps it at the
+        front of its queue with the remaining quantity, preserving time
+        priority. Returns the order as it was before the fill.
+        """
+        best = self.best_price()
+        if best is None:
+            raise KeyError("no resting orders to fill")
+        queue = self._levels[best]
+        front = queue[0]
+        if qty > front.qty:
+            raise ValueError(f"fill qty {qty} exceeds resting qty {front.qty}")
+        if qty == front.qty:
+            queue.popleft()
+            if not queue:
+                del self._levels[best]
+        else:
+            queue[0] = replace(front, qty=front.qty - qty)
+        return front
 
     def level(self, price: int) -> list[Order]:
         """Return the orders resting at a price level, in queue order."""
