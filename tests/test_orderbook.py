@@ -163,6 +163,20 @@ def test_order_can_sweep_multiple_price_levels():
     assert len(book.bids) == 0
 
 
+def test_partial_sweep_then_price_limit_rests_remainder_at_own_price():
+    book = OrderBook()
+    book.add_limit(make_order(1, Side.SELL, 99, qty=2))
+    book.add_limit(make_order(2, Side.SELL, 105, qty=10))
+    trades = book.add_limit(make_order(3, Side.BUY, 100, qty=5))
+    assert trades == [Trade(price=99, qty=2, taker_order_id=3, maker_order_id=1, ts=0)]
+    assert book.asks.level(99) == []
+    assert book.asks.level(105)[0].qty == 10
+    resting = book.bids.level(100)
+    assert len(resting) == 1
+    assert resting[0].id == 3
+    assert resting[0].qty == 3
+
+
 def test_add_limit_rejects_duplicate_id_after_resting_as_maker():
     book = OrderBook()
     book.add_limit(make_order(1, Side.SELL, 100, qty=3))
