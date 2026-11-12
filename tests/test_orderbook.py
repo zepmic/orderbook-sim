@@ -10,6 +10,10 @@ def make_order(id, side, price, qty=1, ts=0):
     return Order(id=id, side=side, order_type=OrderType.LIMIT, price=price, qty=qty, ts=ts)
 
 
+def make_market_order(id, side, qty=1, ts=0):
+    return Order(id=id, side=side, order_type=OrderType.MARKET, price=None, qty=qty, ts=ts)
+
+
 def test_add_limit_puts_buy_order_on_bids():
     book = OrderBook()
     order = make_order(1, Side.BUY, 100)
@@ -183,3 +187,53 @@ def test_add_limit_rejects_duplicate_id_after_resting_as_maker():
     book.add_limit(make_order(2, Side.BUY, 100, qty=1))
     with pytest.raises(ValueError):
         book.add_limit(make_order(1, Side.BUY, 100))
+
+
+def test_add_market_matches_against_best_price():
+    book = OrderBook()
+    book.add_limit(make_order(1, Side.SELL, 100, qty=5))
+    trades = book.add_market(make_market_order(2, Side.BUY, qty=5))
+    assert trades == [Trade(price=100, qty=5, taker_order_id=2, maker_order_id=1, ts=0)]
+    assert len(book.asks) == 0
+
+
+def test_add_market_sweeps_multiple_price_levels():
+    book = OrderBook()
+    book.add_limit(make_order(1, Side.SELL, 100, qty=3))
+    book.add_limit(make_order(2, Side.SELL, 101, qty=4))
+    trades = book.add_market(make_market_order(3, Side.BUY, qty=5))
+    assert trades == [
+        Trade(price=100, qty=3, taker_order_id=3, maker_order_id=1, ts=0),
+        Trade(price=101, qty=2, taker_order_id=3, maker_order_id=2, ts=0),
+    ]
+    assert book.asks.level(101)[0].qty == 2
+
+
+def test_add_market_leaves_remainder_unfilled_without_resting():
+    book = OrderBook()
+    book.add_limit(make_order(1, Side.SELL, 100, qty=2))
+    trades = book.add_market(make_market_order(2, Side.BUY, qty=5))
+    assert trades == [Trade(price=100, qty=2, taker_order_id=2, maker_order_id=1, ts=0)]
+    assert len(book.asks) == 0
+    assert len(book.bids) == 0
+
+
+def test_add_market_returns_no_trades_against_empty_book():
+    book = OrderBook()
+    trades = book.add_market(make_market_order(1, Side.BUY, qty=5))
+    assert trades == []
+    assert len(book.bids) == 0
+
+
+def test_add_market_sells_match_against_bids():
+    book = OrderBook()
+    book.add_limit(make_order(1, Side.BUY, 100, qty=5))
+    trades = book.add_market(make_market_order(2, Side.SELL, qty=5))
+    assert trades == [Trade(price=100, qty=5, taker_order_id=2, maker_order_id=1, ts=0)]
+    assert len(book.bids) == 0
+
+
+def test_add_market_rejects_limit_order():
+    book = OrderBook()
+    with pytest.raises(ValueError):
+        book.add_market(make_order(1, Side.BUY, 100))
