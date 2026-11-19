@@ -52,6 +52,20 @@ class OrderBook:
         trades, _ = self._match(order, opposite)
         return trades
 
+    def cancel(self, order_id: int) -> Order:
+        """Remove a resting order from the book and return it.
+
+        Raises KeyError if no resting order with the given id exists.
+        """
+        if order_id not in self._resting_ids:
+            raise KeyError(f"no resting order with id {order_id}")
+        try:
+            order = self.bids.remove(order_id)
+        except KeyError:
+            order = self.asks.remove(order_id)
+        self._resting_ids.discard(order_id)
+        return order
+
     def _match(self, order: Order, opposite: BookSide) -> tuple[list[Trade], int]:
         """Fill a taker order against one side in price-time priority.
 

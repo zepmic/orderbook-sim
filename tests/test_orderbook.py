@@ -237,3 +237,62 @@ def test_add_market_rejects_limit_order():
     book = OrderBook()
     with pytest.raises(ValueError):
         book.add_market(make_order(1, Side.BUY, 100))
+
+
+def test_cancel_removes_resting_buy_order():
+    book = OrderBook()
+    order = make_order(1, Side.BUY, 100)
+    book.add_limit(order)
+    cancelled = book.cancel(1)
+    assert cancelled == order
+    assert len(book.bids) == 0
+
+
+def test_cancel_removes_resting_sell_order():
+    book = OrderBook()
+    order = make_order(1, Side.SELL, 100)
+    book.add_limit(order)
+    cancelled = book.cancel(1)
+    assert cancelled == order
+    assert len(book.asks) == 0
+
+
+def test_cancel_unknown_order_raises():
+    book = OrderBook()
+    with pytest.raises(KeyError):
+        book.cancel(1)
+
+
+def test_cancel_already_cancelled_order_raises():
+    book = OrderBook()
+    book.add_limit(make_order(1, Side.BUY, 100))
+    book.cancel(1)
+    with pytest.raises(KeyError):
+        book.cancel(1)
+
+
+def test_cancelled_order_id_can_be_reused():
+    book = OrderBook()
+    book.add_limit(make_order(1, Side.BUY, 100))
+    book.cancel(1)
+    book.add_limit(make_order(1, Side.SELL, 101))
+    assert book.asks.level(101)[0].id == 1
+
+
+def test_cancel_after_partial_fill_removes_only_remaining_qty():
+    book = OrderBook()
+    book.add_limit(make_order(1, Side.SELL, 100, qty=3))
+    book.add_limit(make_order(2, Side.BUY, 100, qty=5))
+    cancelled = book.cancel(2)
+    assert cancelled.qty == 2
+    assert len(book.bids) == 0
+
+
+def test_cancel_does_not_affect_other_resting_orders_at_same_level():
+    book = OrderBook()
+    first = make_order(1, Side.BUY, 100)
+    second = make_order(2, Side.BUY, 100)
+    book.add_limit(first)
+    book.add_limit(second)
+    book.cancel(1)
+    assert book.bids.level(100) == [second]
