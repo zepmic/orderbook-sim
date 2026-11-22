@@ -66,6 +66,36 @@ class OrderBook:
         self._resting_ids.discard(order_id)
         return order
 
+    def modify(self, order_id: int, *, price: int | None = None, qty: int | None = None) -> Order:
+        """Change the price and/or quantity of a resting order.
+
+        Lowering the quantity while leaving the price unchanged keeps the
+        order's place in its price level's queue, so its time priority
+        survives. Any other change, raising the quantity or moving the
+        price, is treated as a cancel and replace: the order loses its
+        time priority and goes to the back of the queue for its (possibly
+        new) price. Passing None for price or qty leaves it unchanged.
+
+        Raises KeyError if no resting order with the given id exists.
+        """
+        if order_id not in self._resting_ids:
+            raise KeyError(f"no resting order with id {order_id}")
+        side = self.bids if self.bids.get(order_id) is not None else self.asks
+        current = side.get(order_id)
+        new_price = current.price if price is None else price
+        new_qty = current.qty if qty is None else qty
+        if new_price == current.price:
+            if new_qty == current.qty:
+                return current
+            if new_qty < current.qty:
+                return side.reduce_qty(order_id, new_qty)
+        side.remove(order_id)
+        self._resting_ids.discard(order_id)
+        modified = replace(current, price=new_price, qty=new_qty)
+        side.add(modified)
+        self._resting_ids.add(order_id)
+        return modified
+
     def _match(self, order: Order, opposite: BookSide) -> tuple[list[Trade], int]:
         """Fill a taker order against one side in price-time priority.
 

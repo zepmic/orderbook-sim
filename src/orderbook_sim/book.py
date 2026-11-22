@@ -36,6 +36,32 @@ class BookSide:
                     return order
         raise KeyError(f"no resting order with id {order_id}")
 
+    def get(self, order_id: int) -> Order | None:
+        """Return the resting order with the given id without removing it, or None."""
+        for queue in self._levels.values():
+            for order in queue:
+                if order.id == order_id:
+                    return order
+        return None
+
+    def reduce_qty(self, order_id: int, new_qty: int) -> Order:
+        """Lower a resting order's quantity while keeping its place in the queue.
+
+        Leaving the order at its existing position preserves its time
+        priority among the other orders at the same price level. Raises
+        KeyError if no resting order with the given id exists, and
+        ValueError if new_qty is not strictly smaller than the order's
+        current quantity.
+        """
+        for queue in self._levels.values():
+            for i, order in enumerate(queue):
+                if order.id == order_id:
+                    if new_qty >= order.qty:
+                        raise ValueError(f"new_qty {new_qty} is not a reduction from {order.qty}")
+                    queue[i] = replace(order, qty=new_qty)
+                    return queue[i]
+        raise KeyError(f"no resting order with id {order_id}")
+
     def best_price(self) -> int | None:
         """Return the best price on this side, or None if the side is empty."""
         if not self._levels:

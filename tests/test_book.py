@@ -130,3 +130,49 @@ def test_fill_front_raises_on_empty_side():
     side = BookSide(Side.BUY)
     with pytest.raises(KeyError):
         side.fill_front(1)
+
+
+def test_get_returns_order_without_removing_it():
+    side = BookSide(Side.BUY)
+    order = make_order(1, Side.BUY, 100)
+    side.add(order)
+    assert side.get(1) is order
+    assert side.level(100) == [order]
+
+
+def test_get_returns_none_for_unknown_order():
+    side = BookSide(Side.BUY)
+    assert side.get(1) is None
+
+
+def test_reduce_qty_lowers_qty_and_keeps_queue_position():
+    side = BookSide(Side.BUY)
+    first = make_order(1, Side.BUY, 100, qty=5)
+    second = make_order(2, Side.BUY, 100)
+    side.add(first)
+    side.add(second)
+    reduced = side.reduce_qty(1, 2)
+    assert reduced.qty == 2
+    assert side.level(100)[0].id == 1
+    assert side.level(100)[0].qty == 2
+    assert side.level(100)[1] is second
+
+
+def test_reduce_qty_rejects_qty_increase():
+    side = BookSide(Side.BUY)
+    side.add(make_order(1, Side.BUY, 100, qty=5))
+    with pytest.raises(ValueError):
+        side.reduce_qty(1, 6)
+
+
+def test_reduce_qty_rejects_equal_qty():
+    side = BookSide(Side.BUY)
+    side.add(make_order(1, Side.BUY, 100, qty=5))
+    with pytest.raises(ValueError):
+        side.reduce_qty(1, 5)
+
+
+def test_reduce_qty_raises_on_unknown_order():
+    side = BookSide(Side.BUY)
+    with pytest.raises(KeyError):
+        side.reduce_qty(1, 1)

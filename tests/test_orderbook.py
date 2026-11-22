@@ -296,3 +296,89 @@ def test_cancel_does_not_affect_other_resting_orders_at_same_level():
     book.add_limit(second)
     book.cancel(1)
     assert book.bids.level(100) == [second]
+
+
+def test_modify_qty_reduction_keeps_priority():
+    book = OrderBook()
+    first = make_order(1, Side.BUY, 100, qty=5)
+    second = make_order(2, Side.BUY, 100)
+    book.add_limit(first)
+    book.add_limit(second)
+    modified = book.modify(1, qty=2)
+    assert modified.qty == 2
+    level = book.bids.level(100)
+    assert level[0].id == 1
+    assert level[0].qty == 2
+    assert level[1] is second
+
+
+def test_modify_qty_increase_loses_priority():
+    book = OrderBook()
+    first = make_order(1, Side.BUY, 100, qty=5)
+    second = make_order(2, Side.BUY, 100)
+    book.add_limit(first)
+    book.add_limit(second)
+    modified = book.modify(1, qty=6)
+    assert modified.qty == 6
+    level = book.bids.level(100)
+    assert level[0] is second
+    assert level[1].id == 1
+    assert level[1].qty == 6
+
+
+def test_modify_price_change_loses_priority():
+    book = OrderBook()
+    first = make_order(1, Side.BUY, 100)
+    second = make_order(2, Side.BUY, 101)
+    book.add_limit(first)
+    book.add_limit(second)
+    modified = book.modify(1, price=101)
+    assert modified.price == 101
+    assert book.bids.level(100) == []
+    level = book.bids.level(101)
+    assert level[0] is second
+    assert level[1].id == 1
+
+
+def test_modify_price_change_also_resets_priority_at_same_new_level():
+    book = OrderBook()
+    first = make_order(1, Side.SELL, 100)
+    second = make_order(2, Side.SELL, 101)
+    third = make_order(3, Side.SELL, 101)
+    book.add_limit(first)
+    book.add_limit(second)
+    book.add_limit(third)
+    book.modify(1, price=101)
+    level = book.asks.level(101)
+    assert [order.id for order in level] == [2, 3, 1]
+
+
+def test_modify_without_changes_returns_order_unchanged():
+    book = OrderBook()
+    order = make_order(1, Side.BUY, 100, qty=5)
+    book.add_limit(order)
+    modified = book.modify(1)
+    assert modified == order
+    assert book.bids.level(100) == [order]
+
+
+def test_modify_rejects_qty_reduction_to_zero():
+    book = OrderBook()
+    book.add_limit(make_order(1, Side.BUY, 100, qty=5))
+    with pytest.raises(ValueError):
+        book.modify(1, qty=0)
+
+
+def test_modify_unknown_order_raises():
+    book = OrderBook()
+    with pytest.raises(KeyError):
+        book.modify(1, qty=1)
+
+
+def test_modify_sell_order_price_change_rests_on_asks():
+    book = OrderBook()
+    book.add_limit(make_order(1, Side.SELL, 100))
+    modified = book.modify(1, price=102)
+    assert modified.price == 102
+    assert book.asks.level(100) == []
+    assert book.asks.level(102) == [modified]
