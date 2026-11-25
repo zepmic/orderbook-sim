@@ -61,6 +61,22 @@ class Order:
 
 
 @dataclass(frozen=True)
+class PriceLevel:
+    """Aggregated resting quantity at a single price."""
+
+    price: int
+    qty: int
+
+
+@dataclass(frozen=True)
+class DepthSnapshot:
+    """Top price levels on each side of the book, best price first."""
+
+    bids: tuple[PriceLevel, ...]
+    asks: tuple[PriceLevel, ...]
+
+
+@dataclass(frozen=True)
 class Trade:
     """A single execution resulting from matching a taker order against a maker order.
 

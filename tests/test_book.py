@@ -1,7 +1,7 @@
 import pytest
 
 from orderbook_sim.book import BookSide
-from orderbook_sim.model import Order, OrderType, Side
+from orderbook_sim.model import Order, OrderType, PriceLevel, Side
 
 
 def make_order(id, side, price, qty=1, ts=0):
@@ -176,3 +176,44 @@ def test_reduce_qty_raises_on_unknown_order():
     side = BookSide(Side.BUY)
     with pytest.raises(KeyError):
         side.reduce_qty(1, 1)
+
+
+def test_top_levels_orders_buy_side_from_highest_price():
+    side = BookSide(Side.BUY)
+    side.add(make_order(1, Side.BUY, 100))
+    side.add(make_order(2, Side.BUY, 102))
+    side.add(make_order(3, Side.BUY, 101))
+    assert side.top_levels(2) == [PriceLevel(price=102, qty=1), PriceLevel(price=101, qty=1)]
+
+
+def test_top_levels_orders_sell_side_from_lowest_price():
+    side = BookSide(Side.SELL)
+    side.add(make_order(1, Side.SELL, 100))
+    side.add(make_order(2, Side.SELL, 98))
+    side.add(make_order(3, Side.SELL, 99))
+    assert side.top_levels(2) == [PriceLevel(price=98, qty=1), PriceLevel(price=99, qty=1)]
+
+
+def test_top_levels_aggregates_qty_at_each_price():
+    side = BookSide(Side.BUY)
+    side.add(make_order(1, Side.BUY, 100, qty=3))
+    side.add(make_order(2, Side.BUY, 100, qty=4))
+    assert side.top_levels(5) == [PriceLevel(price=100, qty=7)]
+
+
+def test_top_levels_returns_fewer_than_n_when_side_has_fewer_levels():
+    side = BookSide(Side.BUY)
+    side.add(make_order(1, Side.BUY, 100))
+    assert side.top_levels(5) == [PriceLevel(price=100, qty=1)]
+
+
+def test_top_levels_returns_empty_list_on_empty_side():
+    side = BookSide(Side.BUY)
+    assert side.top_levels(5) == []
+
+
+def test_top_levels_rejects_non_positive_n():
+    side = BookSide(Side.BUY)
+    side.add(make_order(1, Side.BUY, 100))
+    with pytest.raises(ValueError):
+        side.top_levels(0)

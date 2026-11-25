@@ -4,7 +4,7 @@ from dataclasses import replace
 from decimal import Decimal
 
 from .book import BookSide
-from .model import Order, OrderType, Side, Trade
+from .model import DepthSnapshot, Order, OrderType, Side, Trade
 
 
 class OrderBook:
@@ -156,3 +156,7 @@ class OrderBook:
         if bid is None or ask is None:
             return None
         return Decimal(bid + ask) / 2
+
+    def depth(self, n: int) -> DepthSnapshot:
+        """Return the n best price levels on each side, best price first."""
+        return DepthSnapshot(bids=tuple(self.bids.top_levels(n)), asks=tuple(self.asks.top_levels(n)))

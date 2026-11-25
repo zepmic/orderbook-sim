@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import pytest
 
-from orderbook_sim.model import Order, OrderType, Side, Trade
+from orderbook_sim.model import DepthSnapshot, Order, OrderType, PriceLevel, Side, Trade
 from orderbook_sim.orderbook import OrderBook
 
 
@@ -382,3 +382,23 @@ def test_modify_sell_order_price_change_rests_on_asks():
     assert modified.price == 102
     assert book.asks.level(100) == []
     assert book.asks.level(102) == [modified]
+
+
+def test_depth_returns_top_n_levels_per_side_best_first():
+    book = OrderBook()
+    book.add_limit(make_order(1, Side.BUY, 99))
+    book.add_limit(make_order(2, Side.BUY, 100))
+    book.add_limit(make_order(3, Side.BUY, 98))
+    book.add_limit(make_order(4, Side.SELL, 103))
+    book.add_limit(make_order(5, Side.SELL, 101))
+    book.add_limit(make_order(6, Side.SELL, 102))
+    snapshot = book.depth(2)
+    assert snapshot == DepthSnapshot(
+        bids=(PriceLevel(price=100, qty=1), PriceLevel(price=99, qty=1)),
+        asks=(PriceLevel(price=101, qty=1), PriceLevel(price=102, qty=1)),
+    )
+
+
+def test_depth_on_empty_book_has_no_levels():
+    book = OrderBook()
+    assert book.depth(5) == DepthSnapshot(bids=(), asks=())

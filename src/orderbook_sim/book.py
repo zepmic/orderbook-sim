@@ -3,7 +3,7 @@
 from collections import deque
 from dataclasses import replace
 
-from .model import Order, OrderType, Side
+from .model import Order, OrderType, PriceLevel, Side
 
 
 class BookSide:
@@ -100,6 +100,20 @@ class BookSide:
     def level(self, price: int) -> list[Order]:
         """Return the orders resting at a price level, in queue order."""
         return list(self._levels.get(price, ()))
+
+    def top_levels(self, n: int) -> list[PriceLevel]:
+        """Return the n best price levels with their total resting quantity.
+
+        Levels are ordered best price first. If the side has fewer than n
+        levels, all of them are returned.
+        """
+        if n <= 0:
+            raise ValueError(f"n must be positive, got {n}")
+        prices = sorted(self._levels, reverse=self.side is Side.BUY)
+        return [
+            PriceLevel(price=price, qty=sum(order.qty for order in self._levels[price]))
+            for price in prices[:n]
+        ]
 
     def __len__(self) -> int:
         return sum(len(queue) for queue in self._levels.values())
